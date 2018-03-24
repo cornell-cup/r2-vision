@@ -16,8 +16,7 @@ using std::vector;
 #define TAG_SIZE 6.5f
 
 int main(int argc, char** argv) {
-    vector<double> origin_tag = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-
+    vector<double> origin_tag = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
     std::unordered_map<int, Mat> known_tags = {
         {0, Mat(origin_tag, true).reshape(1,4)}
     };
@@ -83,15 +82,7 @@ int main(int argc, char** argv) {
     device.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
     device.set(CV_CAP_PROP_FPS, 30);
 
-        // Setup Hardware
-    CURL *curl;
-    curl = curl_easy_init();
-    if (!curl) {
-        std::cerr << "Failed to initialize curl" << std::endl;
-        return -1;
-    }
-    curl_easy_setopt(curl, CURLOPT_URL, argv[1]);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 200L);
+
 
     // Initialize detector
     apriltag_family_t* tf = tag36h11_create();
@@ -109,11 +100,12 @@ int main(int argc, char** argv) {
 
     int key = 0;
     Mat frame, gray;
+
     while (key != 27) { //Quit on escape key press
         if (!device.isOpened()) {
             continue;
         }
-
+        std::cout << "hi";
         device >> frame;
         cvtColor(frame, gray, COLOR_BGR2GRAY);
 
@@ -290,7 +282,6 @@ int main(int argc, char** argv) {
                         tagXYZS.at<double>(0), tagXYZS.at<double>(1), tagXYZS.at<double>(2));
 
                     known_tags.insert({det->id, trans_rot});
-                    curl_easy_perform(curl);
                 }
             }
 
@@ -299,24 +290,9 @@ int main(int argc, char** argv) {
             }
             zarray_destroy(detections);
 
-            imshow(std::to_string(0), frame);
-        }
 
+        }
+        imshow(std::to_string(0), frame);
         key = waitKey(16);
     }
-    curl_easy_cleanup(curl);
 }
-
-
-
-
-
-// Helper Methods
-
-// public void drawOutline(detection det) {
-
-// }
-
-// Helper Functions
-// Write to calib file
-// Test
