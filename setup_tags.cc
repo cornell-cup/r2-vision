@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
         if (!device.isOpened()) {
             continue;
         }
-        std::cout << "hi";
         device >> frame;
         cvtColor(frame, gray, COLOR_BGR2GRAY);
 
@@ -116,98 +115,98 @@ int main(int argc, char** argv) {
             .buf = gray.data
         };
 
+
+        zarray_t* detections = apriltag_detector_detect(td, &im);
+
+        vector<Point2f> img_points(4);
+        vector<Point3f> obj_points(4);
+        Mat rvec(3, 1, CV_64FC1);
+        Mat tvec(3, 1, CV_64FC1);
+
+        int origin_id = -1; // known tag id being used as the "origin" tag
+        //locate_origin
+        for (int j = zarray_size(detections) - 1; j >= 0; j--) {
+            // Get the ith detection
+            apriltag_detection_t *det;
+            zarray_get(detections, j, &det);
+
+            //sees if we can use the tag detected as the origin
+            if (known_tags.find(det -> id) != known_tags.end()) {
+                origin_id = det -> id;
+
+                // Draw onto the frame
+                line(frame, Point(det->p[0][0], det->p[0][1]),
+                        Point(det->p[1][0], det->p[1][1]),
+                        Scalar(0, 0xff, 0), 2);
+                line(frame, Point(det->p[0][0], det->p[0][1]),
+                        Point(det->p[3][0], det->p[3][1]),
+                        Scalar(0, 0, 0xff), 2);
+                line(frame, Point(det->p[1][0], det->p[1][1]),
+                        Point(det->p[2][0], det->p[2][1]),
+                        Scalar(0xff, 0, 0), 2);
+                line(frame, Point(det->p[2][0], det->p[2][1]),
+                        Point(det->p[3][0], det->p[3][1]),
+                        Scalar(0xff, 0, 0), 2);
+
+                // Compute transformation using PnP
+                img_points[0] = Point2f(det->p[0][0], det->p[0][1]);
+                img_points[1] = Point2f(det->p[1][0], det->p[1][1]);
+                img_points[2] = Point2f(det->p[2][0], det->p[2][1]);
+                img_points[3] = Point2f(det->p[3][0], det->p[3][1]);
+
+                obj_points[0] = Point3f(-0.5f * TAG_SIZE, -0.5f * TAG_SIZE, 0.f);
+                obj_points[1] = Point3f( 0.5f * TAG_SIZE, -0.5f * TAG_SIZE, 0.f);
+                obj_points[2] = Point3f( 0.5f * TAG_SIZE,  0.5f * TAG_SIZE, 0.f);
+                obj_points[3] = Point3f(-0.5f * TAG_SIZE,  0.5f * TAG_SIZE, 0.f);
+            }
+        }
+
+        if (origin_id == -1){
+            printf("Did not find a known tag");
+        }
+
+        solvePnP(obj_points, img_points, camera_matrix, dist_coeffs, rvec, tvec);
+
+        Matx33d r;
+        Rodrigues(rvec,r);
+
+        // Construct the origin to camera matrix
+        vector<double> data;
+        data.push_back(r(0,0));
+        data.push_back(r(0,1));
+        data.push_back(r(0,2));
+        data.push_back(tvec.at<double>(0));
+        data.push_back(r(1,0));
+        data.push_back(r(1,1));
+        data.push_back(r(1,2));
+        data.push_back(tvec.at<double>(1));
+        data.push_back(r(2,0));
+        data.push_back(r(2,1));
+        data.push_back(r(2,2));
+        data.push_back(tvec.at<double>(2));
+        data.push_back(0);
+        data.push_back(0);
+        data.push_back(0);
+        data.push_back(1);
+        Mat origin2cam = Mat(data,true).reshape(1,4);
+
+        Mat cam2origin = origin2cam.inv();
+
+        // DEBUG Generate the location of the camera
+        vector<double> data3;
+        data3.push_back(0);
+        data3.push_back(0);
+        data3.push_back(0);
+        data3.push_back(1);
+        Mat genout = Mat(data3,true).reshape(1,4);
+        Mat camcoords = cam2origin * genout;
+
+        printf("%int :: filler :: % 3.3f % 3.3f % 3.3f\n", id,
+                camcoords.at<double>(0,0), camcoords.at<double>(1,0), camcoords.at<double>(2,0));
+
+
+
         if (key == 's'){
-            zarray_t* detections = apriltag_detector_detect(td, &im);
-
-            vector<Point2f> img_points(4);
-            vector<Point3f> obj_points(4);
-            Mat rvec(3, 1, CV_64FC1);
-            Mat tvec(3, 1, CV_64FC1);
-
-            int origin_id = -1; // known tag id being used as the "origin" tag
-            //locate_origin
-            for (int j = zarray_size(detections) - 1; j >= 0; j--) {
-                // Get the ith detection
-                apriltag_detection_t *det;
-                zarray_get(detections, j, &det);
-
-                //sees if we can use the tag detected as the origin
-                if (known_tags.find(det -> id) != known_tags.end()) {
-                    origin_id = det -> id;
-
-                    // Draw onto the frame
-                    line(frame, Point(det->p[0][0], det->p[0][1]),
-                            Point(det->p[1][0], det->p[1][1]),
-                            Scalar(0, 0xff, 0), 2);
-                    line(frame, Point(det->p[0][0], det->p[0][1]),
-                            Point(det->p[3][0], det->p[3][1]),
-                            Scalar(0, 0, 0xff), 2);
-                    line(frame, Point(det->p[1][0], det->p[1][1]),
-                            Point(det->p[2][0], det->p[2][1]),
-                            Scalar(0xff, 0, 0), 2);
-                    line(frame, Point(det->p[2][0], det->p[2][1]),
-                            Point(det->p[3][0], det->p[3][1]),
-                            Scalar(0xff, 0, 0), 2);
-
-                    // Compute transformation using PnP
-                    img_points[0] = Point2f(det->p[0][0], det->p[0][1]);
-                    img_points[1] = Point2f(det->p[1][0], det->p[1][1]);
-                    img_points[2] = Point2f(det->p[2][0], det->p[2][1]);
-                    img_points[3] = Point2f(det->p[3][0], det->p[3][1]);
-
-                    obj_points[0] = Point3f(-0.5f * TAG_SIZE, -0.5f * TAG_SIZE, 0.f);
-                    obj_points[1] = Point3f( 0.5f * TAG_SIZE, -0.5f * TAG_SIZE, 0.f);
-                    obj_points[2] = Point3f( 0.5f * TAG_SIZE,  0.5f * TAG_SIZE, 0.f);
-                    obj_points[3] = Point3f(-0.5f * TAG_SIZE,  0.5f * TAG_SIZE, 0.f);
-                }
-            }
-
-            if (origin_id == -1){
-                printf("Did not find a known tag");
-            }
-
-            solvePnP(obj_points, img_points, camera_matrix, dist_coeffs, rvec, tvec);
-
-            Matx33d r;
-            Rodrigues(rvec,r);
-
-            // Construct the origin to camera matrix
-            vector<double> data;
-            data.push_back(r(0,0));
-            data.push_back(r(0,1));
-            data.push_back(r(0,2));
-            data.push_back(tvec.at<double>(0));
-            data.push_back(r(1,0));
-            data.push_back(r(1,1));
-            data.push_back(r(1,2));
-            data.push_back(tvec.at<double>(1));
-            data.push_back(r(2,0));
-            data.push_back(r(2,1));
-            data.push_back(r(2,2));
-            data.push_back(tvec.at<double>(2));
-            data.push_back(0);
-            data.push_back(0);
-            data.push_back(0);
-            data.push_back(1);
-            Mat origin2cam = Mat(data,true).reshape(1,4);
-
-            Mat cam2origin = origin2cam.inv();
-
-            // DEBUG Generate the location of the camera
-            vector<double> data3;
-            data3.push_back(0);
-            data3.push_back(0);
-            data3.push_back(0);
-            data3.push_back(1);
-            Mat genout = Mat(data3,true).reshape(1,4);
-            Mat camcoords = cam2origin * genout;
-
-            printf("%int :: filler :: % 3.3f % 3.3f % 3.3f\n", id,
-                    camcoords.at<double>(0,0), camcoords.at<double>(1,0), camcoords.at<double>(2,0));
-
-
-
-
             //locate_tags
             for (int j = 0; j < zarray_size(detections); j++) {
                 // Get the ith detection
@@ -289,8 +288,6 @@ int main(int argc, char** argv) {
                 //write known_tags to a calibration file
             }
             zarray_destroy(detections);
-
-
         }
         imshow(std::to_string(0), frame);
         key = waitKey(16);
