@@ -282,9 +282,9 @@ int main(int argc, char** argv) {
 
                     known_tags.insert({det->id, trans_rot});
 
-                    for (auto it : known_tags) {
-                        std::cout << " " << it.first << ":" << it.second;
-                    }
+                    //for (auto it : known) {
+                    //    std::cout << " " << it.first << ":" << it.second;
+                    //}
                 }
             }
 
