@@ -149,15 +149,29 @@ int main(int argc, char** argv) {
                             Scalar(0xff, 0, 0), 2);
 
                     // Compute transformation using PnP
+                    /*
+                    img_points[0] = Point2f(243.168, 115.075);
+                    img_points[1] = Point2f(268.68, 114.811);
+                    img_points[2] = Point2f(269.206, 88.5634);
+                    img_points[3] = Point2f(243.38, 88.9512);
+                    img_points[0] = Point2f(243.151, 115.079);
+                    img_points[1] = Point2f(268.709, 114.815);
+                    img_points[2] = Point2f(269.532, 88.5649);
+                    img_points[3] = Point2f(243.411, 88.9758);
+                    */
+
                     img_points[0] = Point2f(det->p[0][0], det->p[0][1]);
                     img_points[1] = Point2f(det->p[1][0], det->p[1][1]);
                     img_points[2] = Point2f(det->p[2][0], det->p[2][1]);
                     img_points[3] = Point2f(det->p[3][0], det->p[3][1]);
 
-                    obj_points[0] = Point3f(-0.5f * TAG_SIZE, -0.5f * TAG_SIZE, 0.f);
-                    obj_points[1] = Point3f( 0.5f * TAG_SIZE, -0.5f * TAG_SIZE, 0.f);
-                    obj_points[2] = Point3f( 0.5f * TAG_SIZE,  0.5f * TAG_SIZE, 0.f);
-                    obj_points[3] = Point3f(-0.5f * TAG_SIZE,  0.5f * TAG_SIZE, 0.f);
+
+                    obj_points[0] = Point3f(-TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
+                    obj_points[1] = Point3f( TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
+                    obj_points[2] = Point3f( TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
+                    obj_points[3] = Point3f(-TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
+
+
                 }
             }
 
@@ -166,6 +180,9 @@ int main(int argc, char** argv) {
             }
 
             solvePnP(obj_points, img_points, camera_matrix, dist_coeffs, rvec, tvec);
+
+            std::cout << rvec << std::endl;
+            std::cout << tvec << std::endl;
 
             Matx33d r;
             Rodrigues(rvec,r);
@@ -201,9 +218,9 @@ int main(int argc, char** argv) {
             Mat genout = Mat(data3,true).reshape(1,4);
             Mat camcoords = cam2origin * genout;
 
+
             printf("%i :: filler :: % 3.3f % 3.3f % 3.3f\n", id,
                     camcoords.at<double>(0,0), camcoords.at<double>(1,0), camcoords.at<double>(2,0));
-
 
 
 
@@ -285,15 +302,42 @@ int main(int argc, char** argv) {
                     //for (auto it : known) {
                     //    std::cout << " " << it.first << ":" << it.second;
                     //}
+
+                    //write known_tags to a calibration file
+                    printf("written to camera \n");
+                    std::ofstream fout;
+                    fout.open(std::to_string(id) + ".calib", std::ofstream::out);
+                    fout << "camera_matrix =";
+                    for (int r = 0; r < camera_matrix.rows; r++) {
+                        for (int c = 0; c < camera_matrix.cols; c++) {
+                            fout << " " << camera_matrix.at<double>(r, c);
+                        }
+                    }
+                    fout << std::endl;
+                    fout << "dist_coeffs =";
+                    for (int r = 0; r < dist_coeffs.rows; r++) {
+                        for (int c = 0; c < dist_coeffs.cols; c++) {
+                            fout << " " << dist_coeffs.at<double>(r, c);
+                        }
+                    }
+                    fout << std::endl;
+                    /*fout << "known_tags =";
+                    for (std::pair<int, Mat> element : known_tags) {
+                        fout << element.first << " :: " << element.second << std::endl;
+                    }
+                    fout << std::endl;
+                    */
+                    fout.close();
                 }
             }
 
-            if (key == 'w'){
-                //write known_tags to a calibration file
-            }
             zarray_destroy(detections);
         }
         imshow(std::to_string(0), frame);
         key = waitKey(16);
     }
 }
+
+//write to calibration file
+//optional: more testing
+//documentation
