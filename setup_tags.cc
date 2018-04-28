@@ -154,11 +154,12 @@ int main(int argc, char** argv) {
                     img_points[1] = Point2f(268.68, 114.811);
                     img_points[2] = Point2f(269.206, 88.5634);
                     img_points[3] = Point2f(243.38, 88.9512);
+
                     img_points[0] = Point2f(243.151, 115.079);
                     img_points[1] = Point2f(268.709, 114.815);
                     img_points[2] = Point2f(269.532, 88.5649);
                     img_points[3] = Point2f(243.411, 88.9758);
-                    */
+*/
 
                     img_points[0] = Point2f(det->p[0][0], det->p[0][1]);
                     img_points[1] = Point2f(det->p[1][0], det->p[1][1]);
@@ -255,6 +256,7 @@ int main(int argc, char** argv) {
                     obj_points[1] = Point3f( TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
                     obj_points[2] = Point3f( TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
                     obj_points[3] = Point3f(-TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
+                    obj_points[3] = Point3f(-TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
 
                     solvePnP(obj_points, img_points, camera_matrix,
                             dist_coeffs, rvec, tvec);
@@ -321,12 +323,15 @@ int main(int argc, char** argv) {
                         }
                     }
                     fout << std::endl;
-                    /*fout << "known_tags =";
-                    for (std::pair<int, Mat> element : known_tags) {
-                        fout << element.first << " :: " << element.second << std::endl;
+
+
+                    fout << "known_tags = ";
+                    std::unordered_map<int, Mat>::iterator iter;
+                    for (iter=known_tags.begin(); iter!=known_tags.end(); iter++) {
+                        fout << iter -> first << " " << iter -> second << std::endl;
                     }
                     fout << std::endl;
-                    */
+
                     fout.close();
                 }
             }
