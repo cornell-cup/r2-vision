@@ -118,12 +118,13 @@ int main(int argc, char** argv) {
         if (key == 's'){
             zarray_t* detections = apriltag_detector_detect(td, &im);
 
-            vector<Point2f> img_points(4);
-            vector<Point3f> obj_points(4);
+            vector<Point2f> img_points(5);
+            vector<Point3f> obj_points(5);
             Mat rvec(3, 1, CV_64FC1);
             Mat tvec(3, 1, CV_64FC1);
 
             int origin_id = -1; // known tag id being used as the "origin" tag
+
             //locate_origin
             for (int j = zarray_size(detections) - 1; j >= 0; j--) {
                 // Get the ith detection
@@ -159,31 +160,30 @@ int main(int argc, char** argv) {
                     img_points[1] = Point2f(268.709, 114.815);
                     img_points[2] = Point2f(269.532, 88.5649);
                     img_points[3] = Point2f(243.411, 88.9758);
-*/
+                    */
 
                     img_points[0] = Point2f(det->p[0][0], det->p[0][1]);
                     img_points[1] = Point2f(det->p[1][0], det->p[1][1]);
                     img_points[2] = Point2f(det->p[2][0], det->p[2][1]);
                     img_points[3] = Point2f(det->p[3][0], det->p[3][1]);
+                    img_points[4] = Point2f(((det->p[0][0] + det->p[1][0] + det->p[2][0] + det->p[3][0]) * 0.25), ((det->p[0][1] + det->p[1][1] + det->p[2][1] + det->p[3][1]) * 0.25));
+
 
 
                     obj_points[0] = Point3f(-TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
                     obj_points[1] = Point3f( TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
                     obj_points[2] = Point3f( TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
                     obj_points[3] = Point3f(-TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
+                    obj_points[4] = Point3f(0.f,  0.f, 0.f);
 
-
+                    key = 27; // want to exit, don't want to accidentally write multiple times
                 }
             }
 
             if (origin_id == -1){
                 printf("Did not find a known tag");
             }
-
             solvePnP(obj_points, img_points, camera_matrix, dist_coeffs, rvec, tvec);
-
-            std::cout << rvec << std::endl;
-            std::cout << tvec << std::endl;
 
             Matx33d r;
             Rodrigues(rvec,r);
@@ -219,11 +219,10 @@ int main(int argc, char** argv) {
             Mat genout = Mat(data3,true).reshape(1,4);
             Mat camcoords = cam2origin * genout;
 
+            std::cout << id<< " :: " << cam2origin << std::endl;
 
             printf("%i :: filler :: % 3.3f % 3.3f % 3.3f\n", id,
                     camcoords.at<double>(0,0), camcoords.at<double>(1,0), camcoords.at<double>(2,0));
-
-
 
             //locate_tags
             for (int j = 0; j < zarray_size(detections); j++) {
@@ -251,12 +250,13 @@ int main(int argc, char** argv) {
                     img_points[1] = Point2f(det->p[1][0], det->p[1][1]);
                     img_points[2] = Point2f(det->p[2][0], det->p[2][1]);
                     img_points[3] = Point2f(det->p[3][0], det->p[3][1]);
+                    img_points[4] = Point2f(((det->p[0][0] + det->p[1][0] + det->p[2][0] + det->p[3][0]) * 0.25), ((det->p[0][1] + det->p[1][1] + det->p[2][1] + det->p[3][1]) * 0.25));
 
                     obj_points[0] = Point3f(-TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
                     obj_points[1] = Point3f( TAG_SIZE * 0.5f, -TAG_SIZE * 0.5f, 0.f);
                     obj_points[2] = Point3f( TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
                     obj_points[3] = Point3f(-TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
-                    obj_points[3] = Point3f(-TAG_SIZE * 0.5f,  TAG_SIZE * 0.5f, 0.f);
+                    obj_points[4] = Point3f(0.f,  0.f, 0.f);
 
                     solvePnP(obj_points, img_points, camera_matrix,
                             dist_coeffs, rvec, tvec);
@@ -301,10 +301,6 @@ int main(int argc, char** argv) {
 
                     known_tags.insert({det->id, trans_rot});
 
-                    //for (auto it : known) {
-                    //    std::cout << " " << it.first << ":" << it.second;
-                    //}
-
                     //write known_tags to a calibration file
                     printf("written to camera \n");
                     std::ofstream fout;
@@ -324,15 +320,22 @@ int main(int argc, char** argv) {
                     }
                     fout << std::endl;
 
+                    fout << "size = ";
+                    fout << known_tags.size() << std::endl;
 
                     fout << "known_tags = ";
                     std::unordered_map<int, Mat>::iterator iter;
                     for (iter=known_tags.begin(); iter!=known_tags.end(); iter++) {
-                        fout << iter -> first << " " << iter -> second << std::endl;
+                        fout << iter -> first << " ";
+                        Mat tag_matrix = iter -> second;
+                        const int MAT_SIZE = 4;
+                        for (int i = 0; i < MAT_SIZE; i++) {
+                            for (int j = 0; j < MAT_SIZE; j++) {
+                                double element = tag_matrix.at<double>(i, j);
+                                fout << element << " ";
+                            }
+                        }
                     }
-                    fout << std::endl;
-
-                    fout.close();
                 }
             }
 
@@ -342,7 +345,3 @@ int main(int argc, char** argv) {
         key = waitKey(16);
     }
 }
-
-//write to calibration file
-//optional: more testing
-//documentation
