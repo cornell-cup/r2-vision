@@ -13,7 +13,7 @@
 using namespace cv;
 using std::vector;
 
-#define TAG_SIZE 6.5f
+#define TAG_SIZE 6.0f
 
 int main(int argc, char** argv) {
     vector<double> origin_tag = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
